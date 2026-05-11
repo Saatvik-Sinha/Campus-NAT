@@ -1,0 +1,76 @@
+model:
+  NAME: BaseSeg
+  encoder_args:
+    NAME: PointNATEncoder
+    blocks: [1, 2, 2, 6, 2]
+    strides: [1, 4, 4, 4, 4]
+    sa_layers: 1
+    sa_use_res: False
+    width: 64
+    in_channels: 3        # xyz only (no colour in Paris-Lille-3D)
+    expansion: 1
+    radius: 0.1
+    nsample: 32
+    aggr_args:
+      feature_type: 'dp_fj'
+      reduction: 'max'
+    group_args:
+      NAME: 'ballquery'
+      normalize_dp: True
+    conv_args:
+      order: conv-norm-act
+    act_args:
+      act: 'relu'
+    norm_args:
+      norm: 'bn'
+  decoder_args:
+    NAME: PointNATDecoder
+  cls_args:
+    NAME: SegHead
+    num_classes: 9        # Paris-Lille-3D has 9 classes
+    in_channels: null
+    norm_args:
+      norm: 'bn'
+
+batch_size: 2
+seed: 1111
+
+dataset:
+  common:
+    NAME: ParisLille3D
+    data_root: data/ParisLille3D/parislille3disfull
+    voxel_size: 0.04
+    voxel_max: 80000
+    loop: 30
+    variable: True
+  train:
+    split: train
+    voxel_max: 80000
+  val:
+    split: test
+    voxel_max: 800000
+
+datatransforms:
+  train: [ChromaticAutoContrast, ChromaticTranslation, ChromaticJitter, HueSaturationTranslation, RandomDropColor,
+          PositionJitter, RandomFlip, RandomJitter, RandomShift, RandomRotate,
+          NormPos, ToTensor]
+  val: [NormPos, ToTensor]
+  vote: [NormPos, ToTensor]
+  kwargs:
+    color_drop: 0.2
+    gravity_dim: 2
+
+epochs: 100
+start_epoch: 1
+optimizer:
+  NAME: sgd
+  momentum: 0.9
+  weight_decay: 0.0001
+
+scheduler:
+  NAME: MultiStepLR
+  decay_rate: 0.1
+  milestones: [60, 80]
+
+lr: 0.01
+mode: train
